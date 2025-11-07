@@ -13,18 +13,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2
-        with:
-          projectBaseDir: .
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
+      # Install .NET
       - name: Install .NET 9
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "9.0.100"
 
+      # SonarCloud Scan
+      - name: SonarCloud Scan
+      # Note: spelling exactly same as below ↓
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build and Publish
       - name: dotnet publish
         run: |
           dotnet publish src/Presentation/Nop.Web/Nop.Web.csproj -c Release -o demo
