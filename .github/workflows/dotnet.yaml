@@ -13,21 +13,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Install .NET
+      # Install .NET 9
       - name: Install .NET 9
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "9.0.100"
 
-      # SonarCloud Scan
+      # SonarCloud Analysis
       - name: SonarCloud Scan
-      # Note: spelling exactly same as below ↓
         uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          args: >
+            -Dsonar.projectKey=polunagasri_nopCommerce
+            -Dsonar.organization=polunagasri
+            -Dsonar.host.url=https://sonarcloud.io
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build and Publish
+      # Build & Publish
       - name: dotnet publish
         run: |
           dotnet publish src/Presentation/Nop.Web/Nop.Web.csproj -c Release -o demo
