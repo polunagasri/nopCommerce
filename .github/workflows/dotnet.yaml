@@ -7,11 +7,24 @@ on:
 
 jobs:
   dotnet_publish:
-    runs-on: 'self-hosted'
+    runs-on: ubuntu-latest
 
     steps:
-      - name: code checkout
-        uses: actions/checkout@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: publish dotnet
-        run: dotnet publish -c Release src/Presentation/Nop.Web/Nop.Web.csproj -o demo
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarcloud-github-action@v5
+        with:
+          token: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Install .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.100"
+
+      - name: dotnet publish
+        run: |
+          dotnet publish src/Presentation/Nop.Web/Nop.Web.csproj \
+            -c Release -o demo
+
