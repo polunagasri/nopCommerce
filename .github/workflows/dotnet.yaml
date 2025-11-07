@@ -6,26 +6,61 @@ on:
       - develop
 
 jobs:
-  dotnet_publish:
+  sonarcloud_and_publish:
     runs-on: ubuntu-latest
+    
+    # Define environment variables once for reuse and clarity
+    env:
+      DOTNET_VERSION: '9.0.100'
+      PROJECT_TO_PUBLISH: 'src/Presentation/Nop.Web/Nop.Web.csproj'
+      PUBLISH_OUTPUT_DIR: 'demo'
 
     steps:
-      - name: Checkout code
+      - name: ⬇️ Checkout code
         uses: actions/checkout@v4
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2
         with:
-          projectBaseDir: .
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          # A shallow clone (default) may not have enough history for accurate SCM data in SonarCloud.
+          fetch-depth: 0 
 
-      - name: Install .NET 9
+      - name: ⚙️ Install .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.100"
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: dotnet publish
+      # --- SONARCLOUD ANALYSIS START ---
+
+      - name: 🏁 SonarScanner Begin
+        uses: SonarSource/sonarcloud-github-action@v2
+        id: begin
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          # 🚨 These are the MANDATORY parameters that were missing! 🚨
+          projectKey: ${{ secrets.SONAR_PROJECT_KEY }}
+          organization: ${{ secrets.SONAR_ORGANIZATION }}
+          args: >
+            /d:sonar.cs.opencover.reportsPaths=**/TestResults/coverage.opencover.xml
+            /d:sonar.scm.disabled=false # Re-enable SCM analysis
+            
+      # Note: 'dotnet build' is typically required here for the scanner to work
+
+      - name: 🛠️ Run dotnet build
+        run: dotnet build ${{ env.PROJECT_TO_PUBLISH }} --configuration Release --no-restore
+
+      - name: 🧪 Run tests and collect code coverage
+        # Adjust the test project path as needed
+        run: dotnet test --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput='TestResults/coverage' 
+
+      # --- SONARCLOUD ANALYSIS END ---
+
+      - name: ⬆️ SonarScanner End
+        uses: SonarSource/sonarcloud-github-action/end@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          
+      # --- PROJECT PUBLISH ---
+      
+      - name: 🚀 dotnet publish
         run: |
-          dotnet publish src/Presentation/Nop.Web/Nop.Web.csproj -c Release -o demo
+          dotnet publish ${{ env.PROJECT_TO_PUBLISH }} -c Release -o ${{ env.PUBLISH_OUTPUT_DIR }}
 
